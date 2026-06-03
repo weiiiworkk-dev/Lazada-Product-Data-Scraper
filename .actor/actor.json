@@ -5,6 +5,5 @@
     "version": "0.1",
     "buildTag": "latest",
     "dockerfile": "Dockerfile",
-    "command": ["python3", "-m", "src.main"],
     "input": "./input_schema.json"
 }
