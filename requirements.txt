@@ -1,0 +1,2 @@
+apify~=1.5
+crawlee[playwright]~=0.5

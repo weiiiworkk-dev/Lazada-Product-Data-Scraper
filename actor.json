@@ -1,0 +1,25 @@
+{
+    "actorSpecification": 1,
+    "name": "lazada-product-scraper",
+    "title": "Lazada Product Scraper",
+    "version": "0.1",
+    "buildTag": "latest",
+    "meta": {
+        "templateId": "python-playwright-chrome"
+    },
+    "environmentVariables": {
+        "APIFY_LOG_LEVEL": "INFO"
+    },
+    "dockerfile": "./Dockerfile",
+    "readme": "./README.md",
+    "input": "./input_schema.json",
+    "storages": {
+        "dataset": {
+            "title": "Lazada Products",
+            "description": "Scraped product data from Lazada"
+        }
+    },
+    "minMemoryMbytes": 1024,
+    "maxMemoryMbytes": 4096,
+    "defaultMemoryMbytes": 2048
+}

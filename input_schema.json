@@ -1,0 +1,50 @@
+{
+    "title": "Lazada Product Scraper Input",
+    "description": "Search for products on Lazada across multiple Southeast Asian countries. The actor extracts product title, price, sales, rating, seller info and more, with automatic currency normalization and data cleaning.",
+    "type": "object",
+    "schemaVersion": 1,
+    "properties": {
+        "keyword": {
+            "title": "Search Keyword",
+            "type": "string",
+            "description": "Product keyword to search for on Lazada (e.g. 'smartphone', 'xiaomi', 'running shoes')",
+            "prefill": "smartphone",
+            "editor": "textfield"
+        },
+        "country": {
+            "title": "Country / Site",
+            "type": "string",
+            "description": "Select the Lazada country site to search on",
+            "editor": "select",
+            "default": "my",
+            "enum": ["sg", "my", "th", "ph", "id", "vn"],
+            "enumTitles": [
+                "Singapore (Lazada.sg)",
+                "Malaysia (Lazada.my)",
+                "Thailand (Lazada.co.th)",
+                "Philippines (Lazada.ph)",
+                "Indonesia (Lazada.co.id)",
+                "Vietnam (Lazada.vn)"
+            ]
+        },
+        "maxPages": {
+            "title": "Max Pages to Scrape",
+            "type": "integer",
+            "description": "Maximum number of search result pages to scrape (each page has ~40 products)",
+            "default": 3,
+            "minimum": 1,
+            "maximum": 50
+        },
+        "proxyConfiguration": {
+            "title": "Proxy Configuration",
+            "type": "object",
+            "description": "Select proxy settings. For best results use Residential proxies when scraping at scale.",
+            "editor": "proxy",
+            "prefill": {
+                "useApifyProxy": true,
+                "apifyProxyGroups": ["RESIDENTIAL"]
+            }
+        }
+    },
+    "required": ["keyword"]
+}
