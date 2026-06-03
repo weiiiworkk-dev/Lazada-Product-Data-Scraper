@@ -2,6 +2,9 @@
     "actorSpecification": 1,
     "name": "lazada-product-data-scraper",
     "title": "Lazada Product Data Scraper",
+    "version": "0.1",
+    "buildTag": "latest",
     "dockerfile": "Dockerfile",
-    "command": ["python3", "-m", "src.main"]
+    "command": ["python3", "-m", "src.main"],
+    "input": "../input_schema.json"
 }
