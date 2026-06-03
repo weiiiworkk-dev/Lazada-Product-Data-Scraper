@@ -1,11 +1,7 @@
-FROM apify/actor-python-playwright:3.11
+FROM apify/actor-python:3.11
 
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
 
-COPY . ./
+RUN pip install -r requirements.txt
 
-RUN python -m playwright install chromium
-RUN python -m playwright install-deps chromium
-
-CMD ["python", "-m", "src.main"]
+CMD ["python3", "-m", "src.main"]
