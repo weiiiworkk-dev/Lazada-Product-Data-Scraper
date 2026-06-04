@@ -24,17 +24,20 @@ async def main() -> None:
             return
 
         from crawlee.crawlers import BeautifulSoupCrawler
-        from crawlee.http_clients import CurlImpersonateHttpClient
 
         proxy_input = actor_input.get('proxyConfiguration') or {}
-        proxy_configuration = await Actor.create_proxy_configuration(
-            groups=proxy_input.get('apifyProxyGroups') if proxy_input.get('useApifyProxy') else None,
-        )
+        Actor.log.info(f'Proxy input: {proxy_input}')
+        use_proxy = proxy_input.get('useApifyProxy', True)
+        groups = proxy_input.get('apifyProxyGroups') if use_proxy else None
+        proxy_configuration = await Actor.create_proxy_configuration(groups=groups)
+        if proxy_configuration:
+            Actor.log.info(f'Proxy created with groups: {groups}')
+        else:
+            Actor.log.warning('No proxy created')
 
         crawler = BeautifulSoupCrawler(
             request_handler=router,
             proxy_configuration=proxy_configuration,
-            http_client=CurlImpersonateHttpClient(),
             max_request_retries=MAX_RETRIES,
             max_requests_per_crawl=max_pages,
             additional_http_error_status_codes=[404, 429, 503],
