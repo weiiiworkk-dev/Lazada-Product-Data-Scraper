@@ -35,14 +35,14 @@ async def main() -> None:
         crawler = PlaywrightCrawler(
             request_handler=router,
             proxy_configuration=proxy_config,
-            use_stealth=True,
             max_request_retries=MAX_RETRIES,
+            max_requests_per_crawl=max_pages,
             headless=True,
             browser_type='chromium',
         )
 
         search_url = _build_search_url(site['domain'], keyword)
-        await crawler.run([search_url], max_pages=max_pages)
+        await crawler.run([search_url])
 
 
 def _build_search_url(domain: str, keyword: str) -> str:
