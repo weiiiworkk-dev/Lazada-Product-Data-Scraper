@@ -27,9 +27,13 @@ async def main() -> None:
         from crawlee.crawlers import PlaywrightCrawler
 
         proxy_input = actor_input.get('proxyConfiguration') or {}
-        proxy_configuration = await Actor.create_proxy_configuration(
-            groups=proxy_input.get('apifyProxyGroups') if proxy_input.get('useApifyProxy') else None,
-        )
+        use_proxy = proxy_input.get('useApifyProxy', True)
+        proxy_groups = proxy_input.get('apifyProxyGroups') if use_proxy else None
+        proxy_configuration = await Actor.create_proxy_configuration(groups=proxy_groups)
+        if proxy_configuration:
+            Actor.log.info(f'Proxy configured with groups: {proxy_groups}')
+        else:
+            Actor.log.warning('No proxy configuration available')
 
         crawler = PlaywrightCrawler(
             request_handler=router,
