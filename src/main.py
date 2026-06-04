@@ -27,14 +27,17 @@ async def main() -> None:
         from crawlee.crawlers import PlaywrightCrawler
 
         proxy_configuration = await Actor.create_proxy_configuration(groups=['RESIDENTIAL'])
+        browser_new_context_options = None
         if proxy_configuration:
-            Actor.log.info('Proxy configured with RESIDENTIAL group')
+            proxy_url = str(await proxy_configuration.new_url())
+            Actor.log.info(f'Proxy URL: {proxy_url[:50]}...')
+            browser_new_context_options = {'proxy': {'server': proxy_url}}
         else:
             Actor.log.warning('No proxy configuration available')
 
         crawler = PlaywrightCrawler(
             request_handler=router,
-            proxy_configuration=proxy_configuration,
+            browser_new_context_options=browser_new_context_options,
             max_request_retries=MAX_RETRIES,
             max_requests_per_crawl=max_pages,
             headless=True,
