@@ -2,8 +2,6 @@ import asyncio
 import urllib.parse
 
 from apify import Actor
-from crawlee.crawlers import PlaywrightCrawler
-from crawlee.proxy_configuration import ProxyConfiguration
 
 from src.config import LAZADA_SITES, SEARCH_PATH, MAX_RETRIES
 from src.routes import router
@@ -25,20 +23,22 @@ async def main() -> None:
             await Actor.fail(f'Unsupported country: {country}')
             return
 
-        proxy_config = None
+        proxy_configuration = None
         proxy_input = actor_input.get('proxyConfiguration')
         if proxy_input and proxy_input.get('useApifyProxy'):
-            proxy_config = ProxyConfiguration(
-                apify_proxy_groups=proxy_input.get('apifyProxyGroups', ['RESIDENTIAL']),
+            proxy_configuration = await Actor.create_proxy_configuration(
+                groups=proxy_input.get('apifyProxyGroups', ['RESIDENTIAL']),
             )
 
+        from crawlee.crawlers import PlaywrightCrawler
         crawler = PlaywrightCrawler(
             request_handler=router,
-            proxy_configuration=proxy_config,
+            proxy_configuration=proxy_configuration,
             max_request_retries=MAX_RETRIES,
             max_requests_per_crawl=max_pages,
             headless=True,
             browser_type='chromium',
+            use_incognito_pages=True,
         )
 
         search_url = _build_search_url(site['domain'], keyword)
