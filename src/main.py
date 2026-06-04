@@ -24,8 +24,7 @@ async def main() -> None:
             await Actor.fail(f'Unsupported country: {country}')
             return
 
-        from datetime import timedelta
-        from crawlee.crawlers import PlaywrightCrawler, GotoOptions
+        from crawlee.crawlers import PlaywrightCrawler
 
         proxy_configuration = await Actor.create_proxy_configuration()
         if proxy_configuration:
@@ -42,8 +41,6 @@ async def main() -> None:
             browser_type='chromium',
             use_incognito_pages=True,
             retry_on_blocked=True,
-            goto_options=GotoOptions(wait_until='domcontentloaded'),
-            navigation_timeout=timedelta(seconds=30),
         )
 
         search_url = _build_search_url(site['domain'], keyword)
