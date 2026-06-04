@@ -1,2 +1,2 @@
 apify>=2
-crawlee>=0.6
+crawlee[all]>=0.6
