@@ -24,6 +24,7 @@ async def main() -> None:
             return
 
         from crawlee.crawlers import BeautifulSoupCrawler
+        from crawlee.http_clients import CurlImpersonateHttpClient
 
         proxy_input = actor_input.get('proxyConfiguration') or {}
         proxy_configuration = await Actor.create_proxy_configuration(
@@ -33,6 +34,7 @@ async def main() -> None:
         crawler = BeautifulSoupCrawler(
             request_handler=router,
             proxy_configuration=proxy_configuration,
+            http_client=CurlImpersonateHttpClient(),
             max_request_retries=MAX_RETRIES,
             max_requests_per_crawl=max_pages,
             additional_http_error_status_codes=[404, 429, 503],
