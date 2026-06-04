@@ -2,7 +2,7 @@ import asyncio
 import urllib.parse
 
 from apify import Actor
-from crawlee.playwright_crawler import PlaywrightCrawler
+from crawlee.crawlers import PlaywrightCrawler
 from crawlee.proxy_configuration import ProxyConfiguration
 
 from src.config import LAZADA_SITES, SEARCH_PATH, MAX_RETRIES

@@ -1,5 +1,5 @@
 from crawlee.router import Router
-from crawlee.playwright_crawler import PlaywrightCrawlingContext
+from crawlee.crawlers import PlaywrightCrawlingContext
 from src.config import PAGE_PARAM, SEARCH_PATH, STALE_ELEMENT_RETRIES
 from src.parser import extract_search_results, has_next_page
 from src.normalizer import normalize_product
