@@ -2,8 +2,14 @@
     "actorSpecification": 1,
     "name": "lazada-product-data-scraper",
     "title": "Lazada Product Data Scraper",
+    "description": "Scrape product data from Lazada across 6 Southeast Asian countries (SG, MY, TH, PH, ID, VN). Extracts titles, prices, sales, ratings, seller info with automatic currency normalization and data cleaning.",
     "version": "0.1",
     "buildTag": "latest",
-    "dockerfile": "Dockerfile",
-    "input": "./input_schema.json"
+    "dockerfile": "./Dockerfile",
+    "readme": "./README.md",
+    "input": "./input_schema.json",
+    "changelog": "./CHANGELOG.md",
+    "minMemoryMbytes": 2048,
+    "maxMemoryMbytes": 8192,
+    "defaultMemoryMbytes": 4096
 }

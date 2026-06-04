@@ -1,10 +1,11 @@
 {
-    "title": "Lazada Product Scraper Input",
-    "description": "Search for products on Lazada across multiple Southeast Asian countries. The actor extracts product title, price, sales, rating, seller info and more, with automatic currency normalization and data cleaning.",
+    "title": "Lazada Product Data Scraper",
+    "description": "Search for products on Lazada and extract structured data with automatic price normalization and currency detection.",
     "type": "object",
     "schemaVersion": 1,
     "properties": {
         "keyword": {
+            "sectionCaption": "Search Settings",
             "title": "Search Keyword",
             "type": "string",
             "description": "Product keyword to search for on Lazada (e.g. 'smartphone', 'xiaomi', 'running shoes')",
@@ -36,9 +37,10 @@
             "maximum": 50
         },
         "proxyConfiguration": {
+            "sectionCaption": "Proxy Settings",
             "title": "Proxy Configuration",
             "type": "object",
-            "description": "Select proxy settings. For best results use Residential proxies when scraping at scale.",
+            "description": "Lazada blocks datacenter IPs. Select **Residential** proxies for best results, or **Datacenter** for light usage.",
             "editor": "proxy",
             "prefill": {
                 "useApifyProxy": true,
