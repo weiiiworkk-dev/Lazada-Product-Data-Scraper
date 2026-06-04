@@ -1,2 +1,2 @@
 apify>=2
-crawlee[playwright]>=0.6
+crawlee>=0.6

@@ -9,7 +9,7 @@
     "readme": "./README.md",
     "input": "./input_schema.json",
     "changelog": "./CHANGELOG.md",
-    "minMemoryMbytes": 2048,
-    "maxMemoryMbytes": 8192,
-    "defaultMemoryMbytes": 4096
+    "minMemoryMbytes": 256,
+    "maxMemoryMbytes": 2048,
+    "defaultMemoryMbytes": 512
 }

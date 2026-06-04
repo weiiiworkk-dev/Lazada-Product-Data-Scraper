@@ -9,8 +9,8 @@ Scrape product data from **Lazada** across 6 Southeast Asian countries. Extracts
 - **Rich Data**: title, price, original price, sales, rating, seller, location, image, specifications
 - **Data Normalization**: Multi-currency price → float, sales count → int, auto currency detection
 - **Pagination**: Automatic page-to-page navigation
-- **Anti-Blocking**: Playwright headless browser + fingerprint randomization + incognito pages
-- **Apify Proxy Integration**: Supports Datacenter and Residential proxies
+- **Lightweight HTTP Crawler**: Uses Lazada's internal AJAX endpoint (no headless browser needed)
+- **Apify Proxy Integration**: Supports Residential proxies
 
 ## Input
 
