@@ -27,18 +27,15 @@ async def main() -> None:
         from datetime import timedelta
         from crawlee.crawlers import PlaywrightCrawler, GotoOptions
 
-        proxy_configuration = await Actor.create_proxy_configuration(groups=['RESIDENTIAL'])
-        browser_new_context_options = None
+        proxy_configuration = await Actor.create_proxy_configuration()
         if proxy_configuration:
-            proxy_url = str(await proxy_configuration.new_url())
-            Actor.log.info(f'Proxy URL: {proxy_url[:50]}...')
-            browser_new_context_options = {'proxy': {'server': proxy_url}}
+            Actor.log.info('Using default Apify proxy')
         else:
             Actor.log.warning('No proxy configuration available')
 
         crawler = PlaywrightCrawler(
             request_handler=router,
-            browser_new_context_options=browser_new_context_options,
+            proxy_configuration=proxy_configuration,
             max_request_retries=MAX_RETRIES,
             max_requests_per_crawl=max_pages,
             headless=True,
