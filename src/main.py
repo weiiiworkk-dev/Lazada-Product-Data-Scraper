@@ -1,4 +1,5 @@
 import asyncio
+import os
 import urllib.parse
 
 from apify import Actor
@@ -23,14 +24,13 @@ async def main() -> None:
             await Actor.fail(f'Unsupported country: {country}')
             return
 
-        proxy_configuration = None
-        proxy_input = actor_input.get('proxyConfiguration')
-        if proxy_input and proxy_input.get('useApifyProxy'):
-            proxy_configuration = await Actor.create_proxy_configuration(
-                groups=proxy_input.get('apifyProxyGroups', ['RESIDENTIAL']),
-            )
-
         from crawlee.crawlers import PlaywrightCrawler
+
+        proxy_input = actor_input.get('proxyConfiguration') or {}
+        proxy_configuration = await Actor.create_proxy_configuration(
+            groups=proxy_input.get('apifyProxyGroups') if proxy_input.get('useApifyProxy') else None,
+        )
+
         crawler = PlaywrightCrawler(
             request_handler=router,
             proxy_configuration=proxy_configuration,
@@ -39,6 +39,7 @@ async def main() -> None:
             headless=True,
             browser_type='chromium',
             use_incognito_pages=True,
+            retry_on_blocked=True,
         )
 
         search_url = _build_search_url(site['domain'], keyword)
