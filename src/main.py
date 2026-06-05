@@ -3,7 +3,7 @@ import json
 from urllib.parse import urlencode, urlparse
 
 from apify import Actor
-from curl_cffi import requests as curl
+from curl_cffi.requests import AsyncSession
 
 SITES = {'sg': 'sg', 'my': 'com.my', 'th': 'co.th', 'ph': 'com.ph', 'id': 'co.id', 'vn': 'vn'}
 CURRENCY_MAP = {'sg': 'SGD', 'my': 'MYR', 'th': 'THB', 'ph': 'PHP', 'id': 'IDR', 'vn': 'VND'}
@@ -11,6 +11,7 @@ SYMBOL_MAP = {'S$': 'SGD', 'RM': 'MYR', '฿': 'THB', '₱': 'PHP', 'Rp': 'IDR',
 SORT_PARAMS = {'relevance': '', 'priceAsc': 'sort=priceasc', 'priceDesc': 'sort=pricedesc',
                'ratingDesc': 'sort=rating', 'newest': 'sort=newest', 'soldDesc': 'sort=sold'}
 MAX_RETRIES = 3
+UA = 'Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36 Chrome/124.0.6422.113 Mobile Safari/537.36'
 
 
 def _parse_currency(price_show, country):
@@ -87,52 +88,6 @@ def _country_from_url(url):
     return None
 
 
-async def _fetch_json(url, proxy_url=None, referer=None):
-    kwargs = dict(impersonate='chrome131', timeout=30, headers={
-        'User-Agent': 'Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36 Chrome/131.0.6422.113 Mobile Safari/537.36',
-        'Accept': 'application/json, text/plain, */*',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'x-requested-with': 'XMLHttpRequest',
-    })
-    if referer:
-        kwargs['headers']['Referer'] = referer
-    if proxy_url:
-        kwargs['proxies'] = {"http": proxy_url, "https": proxy_url}
-    for attempt in range(1, MAX_RETRIES + 1):
-        try:
-            resp = curl.get(url, **kwargs)
-            if resp.status_code == 429:
-                wait = 2 ** attempt
-                Actor.log.warning(f'Rate limited (429) — retry {attempt}/{MAX_RETRIES} in {wait}s')
-                await asyncio.sleep(wait)
-                continue
-            if resp.status_code != 200:
-                Actor.log.warning(f'HTTP {resp.status_code} — retry {attempt}/{MAX_RETRIES}')
-                if attempt < MAX_RETRIES:
-                    await asyncio.sleep(2 ** attempt)
-                continue
-            raw = resp.text
-            if not raw or len(raw) < 50:
-                Actor.log.warning(f'Response too short ({len(raw)}B) — retry {attempt}/{MAX_RETRIES}')
-                if attempt < MAX_RETRIES:
-                    await asyncio.sleep(2 ** attempt)
-                continue
-            try:
-                return json.loads(raw)
-            except json.JSONDecodeError:
-                preview = raw[:200].replace('\n', ' ')
-                Actor.log.warning(f'Non-JSON response (status={resp.status_code}, preview={preview}...) — retry {attempt}/{MAX_RETRIES}')
-                if attempt < MAX_RETRIES:
-                    await asyncio.sleep(2 ** attempt)
-                continue
-        except Exception as e:
-            Actor.log.warning(f'Request failed: {e} — retry {attempt}/{MAX_RETRIES}')
-            if attempt < MAX_RETRIES:
-                await asyncio.sleep(2 ** attempt)
-    Actor.log.error(f'All {MAX_RETRIES} retries exhausted for URL: {url}')
-    return None
-
-
 def _filter_products(products, min_price, max_price, min_rating):
     if min_price is not None:
         products = [x for x in products if x['price'] is not None and x['price'] >= min_price]
@@ -141,6 +96,56 @@ def _filter_products(products, min_price, max_price, min_rating):
     if min_rating is not None:
         products = [x for x in products if x['rating'] is not None and x['rating'] >= min_rating]
     return products
+
+
+async def _bootstrap_session(session, tld):
+    try:
+        resp = await session.get(f'https://www.lazada.{tld}/', impersonate='chrome124', timeout=15)
+        Actor.log.info(f'Homepage {tld}: HTTP {resp.status_code}')
+    except Exception as e:
+        Actor.log.warning(f'Homepage visit failed for {tld}: {e}')
+
+
+async def _fetch_with_session(session, url, referer=None, retries=MAX_RETRIES):
+    headers = {
+        'User-Agent': UA,
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'x-requested-with': 'XMLHttpRequest',
+    }
+    if referer:
+        headers['Referer'] = referer
+    for attempt in range(1, retries + 1):
+        try:
+            resp = await session.get(url, impersonate='chrome124', timeout=30, headers=headers)
+            if resp.status_code == 429:
+                await asyncio.sleep(2 ** attempt)
+                continue
+            if resp.status_code != 200:
+                Actor.log.warning(f'HTTP {resp.status_code} — retry {attempt}/{retries}')
+                if attempt < retries:
+                    await asyncio.sleep(2 ** attempt)
+                continue
+            raw = resp.text
+            if not raw or len(raw) < 50:
+                Actor.log.warning(f'Response too short ({len(raw)}B) — retry {attempt}/{retries}')
+                if attempt < retries:
+                    await asyncio.sleep(2 ** attempt)
+                continue
+            try:
+                return json.loads(raw)
+            except json.JSONDecodeError:
+                preview = raw[:120].replace('\n', ' ')
+                Actor.log.warning(f'Non-JSON response ({preview}...) — retry {attempt}/{retries}')
+                if attempt < retries:
+                    await asyncio.sleep(2 ** attempt)
+                continue
+        except Exception as e:
+            Actor.log.warning(f'Request failed: {e} — retry {attempt}/{retries}')
+            if attempt < retries:
+                await asyncio.sleep(2 ** attempt)
+    Actor.log.error(f'All {retries} retries exhausted for URL: {url}')
+    return None
 
 
 async def main():
@@ -164,53 +169,64 @@ async def main():
             pc = await Actor.create_proxy_configuration(groups=pi.get('apifyProxyGroups'))
             proxy_url = await pc.new_url() if pc else None
 
+        proxy_kwargs = {}
+        if proxy_url:
+            proxy_kwargs['proxies'] = {"http": proxy_url, "https": proxy_url}
+
         all_products = []
 
-        if mode == 'url':
-            if not urls:
-                Actor.log.error('URL mode selected but no URLs provided')
-                return
-            total = len(urls)
-            for idx, raw_url in enumerate(urls, 1):
-                c = _country_from_url(raw_url)
-                if not c:
-                    Actor.log.warning(f'Cannot detect country from URL, skipping: {raw_url}')
-                    continue
-                sep = '&' if '?' in raw_url else '?'
-                ajax_url = f'{raw_url}{sep}ajax=true'
-                data = await _fetch_json(ajax_url, proxy_url, referer=raw_url)
-                if not data:
-                    continue
-                products = parse_items(data, raw_url, c)
-                products = _filter_products(products, min_price, max_price, min_rating)
-                all_products.extend(products)
-                Actor.log.info(f'[{idx}/{total}] {c.upper()}: {len(products)} products')
-        else:
-            if not keywords:
-                Actor.log.error('At least one keyword required')
-                return
+        async with AsyncSession(**proxy_kwargs) as session:
+            if mode == 'url':
+                if not urls:
+                    Actor.log.error('URL mode selected but no URLs provided')
+                    return
+                total = len(urls)
+                for idx, raw_url in enumerate(urls, 1):
+                    c = _country_from_url(raw_url)
+                    if not c:
+                        Actor.log.warning(f'Cannot detect country from URL, skipping: {raw_url}')
+                        continue
+                    tld = SITES[c]
+                    await _bootstrap_session(session, tld)
+                    sep = '&' if '?' in raw_url else '?'
+                    ajax_url = f'{raw_url}{sep}ajax=true'
+                    data = await _fetch_with_session(session, ajax_url, referer=raw_url)
+                    if not data:
+                        continue
+                    products = parse_items(data, raw_url, c)
+                    products = _filter_products(products, min_price, max_price, min_rating)
+                    all_products.extend(products)
+                    Actor.log.info(f'[{idx}/{total}] {c.upper()}: {len(products)} products')
+            else:
+                if not keywords:
+                    Actor.log.error('At least one keyword required')
+                    return
 
-            countries = list(SITES.keys()) if search_all else ([country] if country in SITES else ['my'])
-            sort_param = SORT_PARAMS.get(sort_by, '')
-            total = len(keywords) * len(countries) * max_pages
-            done = 0
+                countries = list(SITES.keys()) if search_all else ([country] if country in SITES else ['my'])
+                seen_tlds = set()
+                sort_param = SORT_PARAMS.get(sort_by, '')
+                total = len(keywords) * len(countries) * max_pages
+                done = 0
 
-            for kw in keywords:
-                for c in countries:
-                    for p in range(1, max_pages + 1):
-                        done += 1
+                for kw in keywords:
+                    for c in countries:
                         tld = SITES[c]
-                        url = f'https://www.lazada.{tld}/catalog/?{urlencode({"q": kw, "page": p, "ajax": "true"})}'
-                        if sort_param:
-                            url += f'&{sort_param}'
-                        data = await _fetch_json(url, proxy_url, referer=f'https://www.lazada.{tld}/')
-                        if not data:
-                            continue
-                        products = parse_items(data, kw, c)
-                        products = _filter_products(products, min_price, max_price, min_rating)
-                        all_products.extend(products)
-                        if products:
-                            Actor.log.info(f'[{done}/{total}] {kw}/{c.upper()} p{p}: {len(products)} products')
+                        if tld not in seen_tlds:
+                            await _bootstrap_session(session, tld)
+                            seen_tlds.add(tld)
+                        for p in range(1, max_pages + 1):
+                            done += 1
+                            url = f'https://www.lazada.{tld}/catalog/?{urlencode({"q": kw, "page": p, "ajax": "true"})}'
+                            if sort_param:
+                                url += f'&{sort_param}'
+                            data = await _fetch_with_session(session, url, referer=f'https://www.lazada.{tld}/')
+                            if not data:
+                                continue
+                            products = parse_items(data, kw, c)
+                            products = _filter_products(products, min_price, max_price, min_rating)
+                            all_products.extend(products)
+                            if products:
+                                Actor.log.info(f'[{done}/{total}] {kw}/{c.upper()} p{p}: {len(products)} products')
 
         if all_products:
             await Actor.push_data(all_products)
