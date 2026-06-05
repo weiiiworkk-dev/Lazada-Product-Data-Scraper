@@ -1,5 +1,6 @@
 import asyncio
 import json
+import re
 from urllib.parse import urlencode, urlparse
 
 from apify import Actor
@@ -106,6 +107,29 @@ async def _bootstrap_session(session, tld):
         Actor.log.warning(f'Homepage visit failed for {tld}: {e}')
 
 
+def _extract_punish_url(html):
+    import re
+    m = re.search(r"window\.location\.replace\(['\"]([^'\"]+)['\"]\)", html)
+    if m:
+        return m.group(1)
+    return None
+
+
+async def _solve_challenge(session, html, origin_url):
+    punish_url = _extract_punish_url(html)
+    if not punish_url:
+        return False
+    if punish_url.startswith('//'):
+        punish_url = 'https:' + punish_url
+    try:
+        resp = await session.get(punish_url, impersonate='chrome124', timeout=15, allow_redirects=True)
+        Actor.log.info(f'Challenge solved: HTTP {resp.status_code}, redirected to {resp.url}')
+        return True
+    except Exception as e:
+        Actor.log.warning(f'Challenge solve failed: {e}')
+        return False
+
+
 async def _fetch_with_session(session, url, referer=None, retries=MAX_RETRIES):
     headers = {
         'User-Agent': UA,
@@ -135,6 +159,10 @@ async def _fetch_with_session(session, url, referer=None, retries=MAX_RETRIES):
             try:
                 return json.loads(raw)
             except json.JSONDecodeError:
+                if attempt == 1:
+                    solved = await _solve_challenge(session, raw, url)
+                    if solved:
+                        continue
                 preview = raw[:120].replace('\n', ' ')
                 Actor.log.warning(f'Non-JSON response ({preview}...) — retry {attempt}/{retries}')
                 if attempt < retries:
