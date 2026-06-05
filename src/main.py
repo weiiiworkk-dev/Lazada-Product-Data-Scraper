@@ -108,10 +108,12 @@ async def _bootstrap_session(session, tld):
 
 
 def _extract_punish_url(html):
-    import re
-    m = re.search(r"window\.location\.replace\(['\"]([^'\"]+)['\"]\)", html)
+    m = re.search(r'var\s+url\s*=\s*window\.location\.protocol\s*\+\s*["\']([^"\']+)["\']', html)
     if m:
         return m.group(1)
+    m2 = re.search(r"window\.location\.replace\(['\"]([^'\"]+)['\"]\)", html)
+    if m2:
+        return m2.group(1)
     return None
 
 
