@@ -81,15 +81,17 @@ def _country_from_url(url):
 
 
 async def _fetch_json(url, proxy_url=None):
-    proxies = {"http": proxy_url, "https": proxy_url} if proxy_url else None
+    kwargs = dict(impersonate='chrome131', timeout=30, headers={
+        'User-Agent': 'Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36 Chrome/131.0.6422.113 Mobile Safari/537.36',
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'x-requested-with': 'XMLHttpRequest',
+    })
+    if proxy_url:
+        kwargs['proxies'] = {"http": proxy_url, "https": proxy_url}
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            resp = curl.get(url, impersonate='chrome131', timeout=30, proxies=proxies, headers={
-                'User-Agent': 'Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36 Chrome/131.0.6422.113 Mobile Safari/537.36',
-                'Accept': 'application/json, text/plain, */*',
-                'Accept-Language': 'en-US,en;q=0.9',
-                'x-requested-with': 'XMLHttpRequest',
-            })
+            resp = curl.get(url, **kwargs)
             if resp.status_code == 429:
                 wait = 2 ** attempt
                 Actor.log.warning(f'Rate limited (429) — retry {attempt}/{MAX_RETRIES} in {wait}s')
@@ -106,7 +108,14 @@ async def _fetch_json(url, proxy_url=None):
                 if attempt < MAX_RETRIES:
                     await asyncio.sleep(2 ** attempt)
                 continue
-            return json.loads(raw)
+            try:
+                return json.loads(raw)
+            except json.JSONDecodeError:
+                preview = raw[:200].replace('\n', ' ')
+                Actor.log.warning(f'Non-JSON response (status={resp.status_code}, preview={preview}...) — retry {attempt}/{MAX_RETRIES}')
+                if attempt < MAX_RETRIES:
+                    await asyncio.sleep(2 ** attempt)
+                continue
         except Exception as e:
             Actor.log.warning(f'Request failed: {e} — retry {attempt}/{MAX_RETRIES}')
             if attempt < MAX_RETRIES:
