@@ -175,7 +175,7 @@ async def _fetch_with_session(session, url, referer=None, retries=MAX_RETRIES):
             Actor.log.warning(f'Request failed: {e} — retry {attempt}/{retries}')
             if attempt < retries:
                 await asyncio.sleep(2 ** attempt)
-    Actor.log.error(f'All {retries} retries exhausted for URL: {url}')
+    Actor.log.error(f'Lazada WAF blocked request after {retries} retries. Try using "proxyConfiguration" with RESIDENTIAL proxy, or try a different keyword. Blocked URL: {url}')
     return None
 
 
