@@ -43,13 +43,13 @@ def parse_items(data, kw, c):
             'price': _f(i.get('price')),
             'originalPrice': _f(i.get('originalPrice')),
             'rating': _f(i.get('ratingScore')),
-            'reviewCount': _i(i.get('review')),
+            'reviewCount': _s(i.get('review')),
             'sales': _i(i.get('sold')),
             'location': i.get('location', ''),
             'sellerName': i.get('sellerName', ''),
             'sellerId': i.get('sellerId', ''),
             'brandName': i.get('brandName', ''),
-            'isLazMall': i.get('premiumBrand', False) or i.get('isLazMall', False),
+            'isLazMall': bool(i.get('premiumBrand', False) or i.get('isLazMall', False)),
         })
     return results
 
@@ -72,6 +72,13 @@ def _i(v):
         return None
 
 
+def _s(v):
+    if v is None:
+        return None
+    v = str(v).strip()
+    return v if v else None
+
+
 def _country_from_url(url):
     host = urlparse(url).hostname or ''
     for code, tld in SITES.items():
@@ -80,13 +87,15 @@ def _country_from_url(url):
     return None
 
 
-async def _fetch_json(url, proxy_url=None):
+async def _fetch_json(url, proxy_url=None, referer=None):
     kwargs = dict(impersonate='chrome131', timeout=30, headers={
         'User-Agent': 'Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36 Chrome/131.0.6422.113 Mobile Safari/537.36',
         'Accept': 'application/json, text/plain, */*',
         'Accept-Language': 'en-US,en;q=0.9',
         'x-requested-with': 'XMLHttpRequest',
     })
+    if referer:
+        kwargs['headers']['Referer'] = referer
     if proxy_url:
         kwargs['proxies'] = {"http": proxy_url, "https": proxy_url}
     for attempt in range(1, MAX_RETRIES + 1):
@@ -169,7 +178,7 @@ async def main():
                     continue
                 sep = '&' if '?' in raw_url else '?'
                 ajax_url = f'{raw_url}{sep}ajax=true'
-                data = await _fetch_json(ajax_url, proxy_url)
+                data = await _fetch_json(ajax_url, proxy_url, referer=raw_url)
                 if not data:
                     continue
                 products = parse_items(data, raw_url, c)
@@ -194,7 +203,7 @@ async def main():
                         url = f'https://www.lazada.{tld}/catalog/?{urlencode({"q": kw, "page": p, "ajax": "true"})}'
                         if sort_param:
                             url += f'&{sort_param}'
-                        data = await _fetch_json(url, proxy_url)
+                        data = await _fetch_json(url, proxy_url, referer=f'https://www.lazada.{tld}/')
                         if not data:
                             continue
                         products = parse_items(data, kw, c)
