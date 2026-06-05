@@ -1,4 +1,2 @@
-apify>=2
-crawlee>=0.6
-beautifulsoup4>=4.12
-
+﻿apify>=2
+curl_cffi>=0.9

@@ -1,52 +1,101 @@
 {
     "title": "Lazada Product Data Scraper",
-    "description": "Search for products on Lazada and extract structured data with automatic price normalization and currency detection.",
+    "description": "Search Lazada across 6 SEA countries. Supports batch keywords, price/rating filters, sorting, cross-country price comparison, and more.",
     "type": "object",
     "schemaVersion": 1,
     "properties": {
-        "keyword": {
-            "sectionCaption": "Search Settings",
-            "title": "Search Keyword",
+        "mode": {
+            "sectionCaption": "Search Mode",
+            "title": "Mode",
             "type": "string",
-            "description": "Product keyword to search for on Lazada (e.g. 'smartphone', 'xiaomi', 'running shoes')",
-            "prefill": "smartphone",
-            "editor": "textfield"
+            "description": "Search by keyword or directly by Lazada URL",
+            "editor": "select",
+            "default": "keyword",
+            "enum": ["keyword", "url"],
+            "enumTitles": ["Search by Keyword", "Search by URL"]
+        },
+        "keywords": {
+            "title": "Keywords",
+            "type": "array",
+            "description": "Product keywords to search (one per line)",
+            "editor": "stringList"
+        },
+        "urls": {
+            "title": "Product URLs",
+            "type": "array",
+            "description": "Lazada search/category URLs (one per line)",
+            "editor": "stringList"
         },
         "country": {
-            "title": "Country / Site",
+            "sectionCaption": "Country",
+            "title": "Country",
             "type": "string",
-            "description": "Select the Lazada country site to search on",
+            "description": "Country site to search",
             "editor": "select",
             "default": "my",
             "enum": ["sg", "my", "th", "ph", "id", "vn"],
-            "enumTitles": [
-                "Singapore (Lazada.sg)",
-                "Malaysia (Lazada.my)",
-                "Thailand (Lazada.co.th)",
-                "Philippines (Lazada.ph)",
-                "Indonesia (Lazada.co.id)",
-                "Vietnam (Lazada.vn)"
-            ]
+            "enumTitles": ["Singapore", "Malaysia", "Thailand", "Philippines", "Indonesia", "Vietnam"]
+        },
+        "searchAllCountries": {
+            "title": "Search All Countries",
+            "type": "boolean",
+            "description": "Search this keyword across ALL 6 countries (overrides Country setting)",
+            "default": false
         },
         "maxPages": {
-            "title": "Max Pages to Scrape",
+            "sectionCaption": "Pagination",
+            "title": "Max Pages per Country",
             "type": "integer",
-            "description": "Maximum number of search result pages to scrape (each page has ~40 products)",
-            "default": 3,
+            "description": "Number of search result pages to scrape per country (~40 products per page)",
+            "default": 1,
             "minimum": 1,
-            "maximum": 50
+            "maximum": 20
+        },
+        "sortBy": {
+            "sectionCaption": "Filters & Sorting",
+            "title": "Sort By",
+            "type": "string",
+            "description": "Sort order for search results",
+            "editor": "select",
+            "default": "relevance",
+            "enum": ["relevance", "priceAsc", "priceDesc", "ratingDesc", "newest", "soldDesc"],
+            "enumTitles": ["Relevance", "Price: Low to High", "Price: High to Low", "Rating: High to Low", "Newest First", "Best Selling"]
+        },
+        "minPrice": {
+            "title": "Min Price",
+            "type": "number",
+            "description": "Minimum price in local currency (optional)",
+            "editor": "number"
+        },
+        "maxPrice": {
+            "title": "Max Price",
+            "type": "number",
+            "description": "Maximum price in local currency (optional)",
+            "editor": "number"
+        },
+        "minRating": {
+            "title": "Min Rating",
+            "type": "number",
+            "description": "Minimum rating (1.0 - 5.0, optional)",
+            "editor": "number"
+        },
+        "comparePrices": {
+            "sectionCaption": "Cross-Country Comparison",
+            "title": "Compare Prices Across Countries",
+            "type": "boolean",
+            "description": "Generate a price comparison report when searching multiple countries",
+            "default": false
         },
         "proxyConfiguration": {
             "sectionCaption": "Proxy Settings",
             "title": "Proxy Configuration",
             "type": "object",
-            "description": "Lazada blocks datacenter IPs. Select **Residential** proxies for best results, or **Datacenter** for light usage.",
+            "description": "Proxy settings. Leave disabled for direct connection.",
             "editor": "proxy",
             "prefill": {
-                "useApifyProxy": true,
-                "apifyProxyGroups": ["RESIDENTIAL"]
+                "useApifyProxy": false
             }
         }
     },
-    "required": ["keyword"]
+    "required": []
 }

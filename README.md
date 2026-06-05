@@ -1,25 +1,31 @@
 # Lazada Product Data Scraper
 
-Scrape product data from **Lazada** across 6 Southeast Asian countries. Extracts product titles, prices, sales, ratings, seller info, and more — with automatic **data normalization** so prices are floats, sales are integers, and currencies are detected.
+Scrape product data from **Lazada** across 6 Southeast Asian countries. Uses Lazada's internal mobile API directly with browser TLS fingerprint impersonation — no headless browser needed, lower cost, higher speed.
 
-## Features
+## Key Features
 
 - **6 Country Sites**: Singapore, Malaysia, Thailand, Philippines, Indonesia, Vietnam
-- **Product Search**: Search by keyword with pagination support
-- **Rich Data**: title, price, original price, sales, rating, seller, location, image, specifications
-- **Data Normalization**: Multi-currency price → float, sales count → int, auto currency detection
-- **Pagination**: Automatic page-to-page navigation
-- **Lightweight HTTP Crawler**: Uses Lazada's internal AJAX endpoint (no headless browser needed)
-- **Apify Proxy Integration**: Supports Residential proxies
+- **Keyword Search**: Search any product keyword with pagination
+- **Structured JSON Output**: Price, rating, sales, seller, brand, location, LazMall status
+- **Data Normalized**: Prices as floats, ratings scored, ready for analysis
+- **Anti-Bot Bypass**: Uses `curl_cffi` with Chrome TLS fingerprint to bypass Cloudflare
+- **Lightweight**: No Playwright/Puppeteer — direct HTTP API calls, fast and cheap
+
+## How It Works
+
+Instead of scraping HTML or running a headless browser, this Actor calls Lazada's internal mobile API endpoint with a browser-emulated TLS handshake. This means:
+
+- **Faster**: ~4 seconds per page vs 30+ seconds with browser automation
+- **Cheaper**: Lower platform compute usage = lower cost per run
+- **More Reliable**: Data comes as clean JSON, no HTML parsing fragility
 
 ## Input
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| keyword | string | ✅ | Search keyword (e.g. "smartphone", "xiaomi") |
-| country | string | | Country site: `sg`, `my`, `th`, `ph`, `id`, `vn` (default: `my`) |
-| maxPages | integer | | Max pages to scrape, ~40 products/page (default: 3, max: 50) |
-| proxyConfiguration | object | | Apify proxy settings. **Residential** recommended for reliable access |
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `keyword` | string | ✅ | — | Product to search for (e.g. "smartphone", "xiaomi") |
+| `country` | string | | `my` | Country site: `sg`, `my`, `th`, `ph`, `id`, `vn` |
+| `maxPages` | integer | | `1` | Pages to scrape (~40 products/page, max: 20) |
 
 ## Output
 
@@ -27,45 +33,66 @@ Each product is saved as an item in the default dataset:
 
 ```json
 {
-  "title": "Xiaomi Redmi Note 13 Pro",
-  "url": "https://www.lazada.my/products/...",
-  "price": 1099.00,
-  "originalPrice": 1399.00,
-  "currency": "MYR",
-  "sales": 5200,
-  "rating": 4.7,
-  "location": "Kuala Lumpur",
-  "sellerName": "Xiaomi Official Store",
-  "imageUrl": "https://...",
-  "specifications": { "RAM": "8 GB", "Storage": "256 GB" }
+  "title": "Apple iPhone 17 Pro Max",
+  "price": 6453,
+  "originalPrice": 6699,
+  "currency": "",
+  "rating": 4.97,
+  "reviewCount": "483",
+  "sales": null,
+  "location": "Selangor",
+  "sellerName": "UR bySwitch",
+  "brandName": "Apple",
+  "isLazMall": false,
+  "imageUrl": "https://my-live-01.slatic.net/p/..."
 }
 ```
 
-### Normalized Fields
+## Quick Start
 
-| Raw (from page) | Normalized |
-|----------------|------------|
-| `RM 89.00` | `price: 89.0`, `currency: "MYR"` |
-| `Rp 150.000` | `price: 150000.0`, `currency: "IDR"` |
-| `"已售 1.5k"` | `sales: 1500` |
-| `"4.8/5"` | `rating: 4.8` |
+```bash
+# Install Apify CLI
+npm -g install apify-cli
 
-## Proxy Recommendation
+# Run the Actor
+apify call lazada-product-scraper \
+  --input '{"keyword":"smartphone","country":"my","maxPages":1}'
+```
 
-Lazada actively blocks datacenter IP addresses. For reliable scraping:
+Or use the API:
 
-- ✅ **Apify Residential Proxy** (`groups: ["RESIDENTIAL"]`) — lowest block rate
-- ⚠️ **Apify Datacenter Proxy** — may work for light usage
-- ❌ **No proxy** — almost certainly blocked
+```python
+import requests
 
-## How to Run
+response = requests.post(
+    "https://api.apify.com/v2/acts/aa5734814~lazada-product-scraper/runs",
+    headers={"Authorization": "Bearer YOUR_API_TOKEN"},
+    json={
+        "keyword": "smartphone",
+        "country": "my",
+        "maxPages": 1
+    }
+)
+```
 
-1. Open the Actor in Apify Console
-2. Enter a search **keyword**
-3. Select a **country** (optional)
-4. Configure **proxy** (Residential recommended)
-5. Click **Run**
+## Use Cases
 
-## Output Formats
+- **Competitor price monitoring** — Track pricing changes across Lazada
+- **Market research** — Analyze product trends in SEA markets
+- **Brand protection** — Monitor authorized vs unauthorized sellers
+- **Inventory tracking** — Check stock status and seller locations
 
-Results can be exported from the Dataset in JSON, CSV, Excel, XML, or HTML formats.
+## Pricing
+
+Pay Per Result — you only pay for the results you use.
+
+## Countries Supported
+
+| Code | Country | Domain |
+|------|---------|--------|
+| `sg` | Singapore | Lazada.sg |
+| `my` | Malaysia | Lazada.my |
+| `th` | Thailand | Lazada.co.th |
+| `ph` | Philippines | Lazada.ph |
+| `id` | Indonesia | Lazada.co.id |
+| `vn` | Vietnam | Lazada.vn |

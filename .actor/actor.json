@@ -1,15 +1,123 @@
 {
-    "actorSpecification": 1,
-    "name": "lazada-product-data-scraper",
-    "title": "Lazada Product Data Scraper",
-    "description": "Scrape product data from Lazada across 6 Southeast Asian countries (SG, MY, TH, PH, ID, VN). Extracts titles, prices, sales, ratings, seller info with automatic currency normalization and data cleaning.",
-    "version": "0.1",
-    "buildTag": "latest",
-    "dockerfile": "./Dockerfile",
-    "readme": "./README.md",
-    "input": "./input_schema.json",
-    "changelog": "./CHANGELOG.md",
-    "minMemoryMbytes": 256,
-    "maxMemoryMbytes": 2048,
-    "defaultMemoryMbytes": 512
+  "actorSpecification": 1,
+  "name": "lazada-product-scraper",
+  "title": "Lazada Product Data Scraper",
+  "description": "Search for products on Lazada across 6 Southeast Asian countries (SG/MY/TH/PH/ID/VN). Extracts titles, prices, ratings, sales, seller info with automatic normalization. Uses Lazada's internal API directly — fast, reliable, no browser needed.",
+  "version": "1.0",
+  "storedResult": {
+    "schema": {
+      "type": "object",
+      "required": ["title", "url"],
+      "properties": {
+        "title": { "type": "string", "description": "Product name" },
+        "price": { "type": ["number", "null"], "description": "Current price in local currency" },
+        "originalPrice": { "type": ["number", "null"], "description": "Original/crossed-out price before discount" },
+        "currency": { "type": "string", "description": "Currency code (SGD/MYR/THB/PHP/IDR/VND)" },
+        "rating": { "type": ["number", "null"], "description": "Product rating score (0-5)" },
+        "reviewCount": { "type": ["string", "null"], "description": "Number of customer reviews" },
+        "sales": { "type": ["integer", "null"], "description": "Number of units sold" },
+        "location": { "type": ["string", "null"], "description": "Seller location" },
+        "sellerName": { "type": ["string", "null"], "description": "Store/seller name" },
+        "sellerId": { "type": ["string", "null"], "description": "Seller/store ID" },
+        "brandName": { "type": ["string", "null"], "description": "Product brand" },
+        "isLazMall": { "type": "boolean", "description": "Whether the seller is LazMall verified" },
+        "imageUrl": { "type": ["string", "null"], "description": "Product image URL" },
+        "url": { "type": "string", "description": "Product detail page URL" },
+        "type": { "type": "string", "description": "Item type: 'product' or 'price_comparison'" },
+        "keyword": { "type": "string", "description": "Search keyword used to find this product" },
+        "country": { "type": "string", "description": "Country code (SG/MY/TH/PH/ID/VN)" }
+      }
+    }
+  },
+  "storages": {
+    "dataset": {
+      "actorSpecification": 1,
+      "fields": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "required": ["title", "url", "type"],
+        "properties": {
+          "title": { "type": "string", "title": "Product Name", "description": "The full name of the product", "example": "Wireless Bluetooth Headphones" },
+          "price": { "type": ["number", "null"], "title": "Price", "description": "Current price in local currency", "example": 29.99 },
+          "originalPrice": { "type": ["number", "null"], "title": "Original Price", "description": "Original/crossed-out price before discount", "example": 49.99 },
+          "currency": { "type": "string", "title": "Currency", "description": "Three-letter currency code (SGD/MYR/THB/PHP/IDR/VND)", "example": "SGD" },
+          "rating": { "type": ["number", "null"], "title": "Rating", "description": "Product rating score from 0 to 5", "example": 4.5 },
+          "reviewCount": { "type": ["string", "null"], "title": "Reviews", "description": "Number of customer reviews", "example": "1,234" },
+          "sales": { "type": ["integer", "null"], "title": "Units Sold", "description": "Number of units sold", "example": 5000 },
+          "location": { "type": ["string", "null"], "title": "Origin", "description": "Seller's location", "example": "Jakarta" },
+          "sellerName": { "type": ["string", "null"], "title": "Seller", "description": "Store or seller name", "example": "Official Store" },
+          "sellerId": { "type": ["string", "null"], "title": "Seller ID", "description": "Unique seller identifier", "example": "12345678" },
+          "brandName": { "type": ["string", "null"], "title": "Brand", "description": "Product brand name", "example": "Samsung" },
+          "isLazMall": { "type": "boolean", "title": "LazMall", "description": "Whether the seller is LazMall verified", "example": true },
+          "imageUrl": { "type": ["string", "null"], "title": "Image", "description": "Product image URL", "example": "https://laz-img-sg.alicdn.com/p/example.jpg" },
+          "url": { "type": "string", "title": "Product URL", "description": "Direct link to the product detail page", "example": "https://www.lazada.sg/products/example.html" },
+          "type": { "type": "string", "title": "Type", "description": "Item type: 'product' or 'price_comparison'", "example": "product" },
+          "keyword": { "type": "string", "title": "Keyword", "description": "The search keyword used", "example": "headphone" },
+          "country": { "type": "string", "title": "Country", "description": "Two-letter country code (SG/MY/TH/PH/ID/VN)", "example": "SG" }
+        }
+      },
+      "views": {
+        "overview": {
+          "title": "Products",
+          "transformation": {
+            "fields": [
+              "title", "price", "currency", "rating", "sales", "sellerName",
+              "isLazMall", "country", "keyword", "url", "imageUrl",
+              "originalPrice", "reviewCount", "location", "brandName"
+            ]
+          },
+          "display": {
+            "component": "table",
+            "properties": {
+              "title": { "label": "Product", "format": "text" },
+              "price": { "label": "Price", "format": "number" },
+              "currency": { "label": "Curr.", "format": "text" },
+              "rating": { "label": "Rating", "format": "number" },
+              "sales": { "label": "Sold", "format": "number" },
+              "sellerName": { "label": "Seller", "format": "text" },
+              "isLazMall": { "label": "LazMall", "format": "boolean" },
+              "country": { "label": "Country", "format": "text" },
+              "keyword": { "label": "Keyword", "format": "text" },
+              "url": { "label": "Link", "format": "link" },
+              "imageUrl": { "label": "Image", "format": "image" },
+              "originalPrice": { "label": "Orig.", "format": "number" },
+              "reviewCount": { "label": "Reviews", "format": "text" },
+              "location": { "label": "Origin", "format": "text" },
+              "brandName": { "label": "Brand", "format": "text" }
+            }
+          }
+        },
+        "comparison": {
+          "title": "Price Comparison",
+          "transformation": {
+            "fields": [
+              "keyword", "totalProducts", "cheapestCountry", "countries", "summary"
+            ]
+          },
+          "display": {
+            "component": "table",
+            "properties": {
+              "keyword": { "label": "Keyword", "format": "text" },
+              "totalProducts": { "label": "Total", "format": "number" },
+              "cheapestCountry": { "label": "Cheapest", "format": "text" },
+              "countries": { "label": "Countries", "format": "array" },
+              "summary": { "label": "Summary", "format": "object" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "output": {
+    "actorOutputSchemaVersion": 1,
+    "title": "Lazada Product Data Scraper Output",
+    "properties": {
+      "results": {
+        "type": "string",
+        "title": "Product Results",
+        "description": "JSON array of scraped products. Download as JSON, CSV, or XLSX from the dataset.",
+        "template": "{{links.apiDefaultDatasetUrl}}/items"
+      }
+    }
+  }
 }
