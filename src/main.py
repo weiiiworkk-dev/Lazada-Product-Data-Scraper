@@ -118,12 +118,13 @@ def _extract_punish_url(html):
 async def _solve_challenge(session, html, origin_url):
     punish_url = _extract_punish_url(html)
     if not punish_url:
+        Actor.log.warning(f'Could not extract punish URL from challenge response')
         return False
     if punish_url.startswith('//'):
         punish_url = 'https:' + punish_url
     try:
-        resp = await session.get(punish_url, impersonate='chrome124', timeout=15, allow_redirects=True)
-        Actor.log.info(f'Challenge solved: HTTP {resp.status_code}, redirected to {resp.url}')
+        resp = await session.get(punish_url, impersonate='chrome124', timeout=15)
+        Actor.log.info(f'Challenge solved: HTTP {resp.status_code}')
         return True
     except Exception as e:
         Actor.log.warning(f'Challenge solve failed: {e}')
@@ -218,7 +219,7 @@ async def main():
                     await _bootstrap_session(session, tld)
                     sep = '&' if '?' in raw_url else '?'
                     ajax_url = f'{raw_url}{sep}ajax=true'
-                    data = await _fetch_with_session(session, ajax_url, referer=raw_url)
+                    data = await _fetch_with_session(session, ajax_url, referer=f'https://www.lazada.{tld}/')
                     if not data:
                         continue
                     products = parse_items(data, raw_url, c)
